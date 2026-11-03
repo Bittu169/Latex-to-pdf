@@ -1,0 +1,8 @@
+{
+  "name": "LaTeX Thesis & Report to PDF Studio",
+  "description": "Convert, edit, and compile LaTeX student project templates and academic papers into pristine PDF documents with accurate mathematical equation rendering, figures, and bibtex citations.",
+  "permissions": [],
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

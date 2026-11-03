@@ -1,0 +1,110 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+}
+
+/* Academic LaTeX Computer Modern & Latin Modern Serif styles */
+.font-academic {
+  font-family: "Tinos", "EB Garamond", "Times New Roman", Times, Georgia, serif;
+}
+
+.font-calligraphic {
+  font-family: "Cinzel", "EB Garamond", Georgia, serif;
+  font-style: italic;
+}
+
+.font-mono-code {
+  font-family: "JetBrains Mono", Menlo, Monaco, Consolas, "Courier New", monospace;
+}
+
+/* A4 Page Formatting for PDF Simulation and Print */
+.latex-page {
+  width: 210mm;
+  min-height: 297mm;
+  max-width: 210mm;
+  margin-left: auto;
+  margin-right: auto;
+  background: white;
+  box-sizing: border-box;
+  position: relative;
+  page-break-after: always;
+  break-after: page;
+}
+
+/* Exact 1 inch (25.4mm) LaTeX margin with header/footer clearances */
+.latex-page-content {
+  padding-left: 25.4mm;
+  padding-right: 25.4mm;
+  padding-top: 25.4mm;
+  padding-bottom: 25.4mm;
+}
+
+/* Print Styles for Perfect 1:1 Clean PDF Document Generation */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
+  
+  html, body {
+    background: white !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 210mm !important;
+    height: auto !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  .latex-page {
+    box-shadow: none !important;
+    border: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 210mm !important;
+    min-height: 297mm !important;
+    height: 297mm !important;
+    page-break-before: always !important;
+    page-break-after: always !important;
+    break-before: page !important;
+    break-after: page !important;
+    overflow: hidden !important;
+  }
+
+  .latex-page:first-of-type {
+    page-break-before: auto !important;
+    break-before: auto !important;
+  }
+}
+
+/* Dotted Leader Line for Table of Contents */
+.toc-dots {
+  background-image: radial-gradient(circle, #333 1px, transparent 1.5px);
+  background-size: 8px 100%;
+  background-repeat: repeat-x;
+  background-position: bottom 4px center;
+}
+
+/* KaTeX custom tweaks for crisp academic rendering */
+.katex-display {
+  margin: 0.8em 0 !important;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 4px 0;
+}
+
+.katex {
+  font-size: 1.05em !important;
+  text-rendering: auto;
+}
