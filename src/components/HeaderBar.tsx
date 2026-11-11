@@ -15,7 +15,9 @@ import {
   History,
   UploadCloud,
   AlignLeft,
-  FileType
+  FileType,
+  Copy,
+  FilePlus
 } from 'lucide-react';
 
 export type ViewMode = 'pdf' | 'split' | 'code';
@@ -38,6 +40,10 @@ interface HeaderBarProps {
   onDownloadWord: () => void;
   onPrintPdf: () => void;
   onExportCode: () => void;
+  onCopyAllCode?: () => void;
+  onLoadTemplate?: () => void;
+  onNewBlankDoc?: () => void;
+  hasFiles?: boolean;
   isGeneratingPdf: boolean;
   isGeneratingWord: boolean;
   pdfProgressText?: string;
@@ -61,6 +67,10 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
   onDownloadWord,
   onPrintPdf,
   onExportCode,
+  onCopyAllCode,
+  onLoadTemplate,
+  onNewBlankDoc,
+  hasFiles,
   isGeneratingPdf,
   isGeneratingWord,
   pdfProgressText
@@ -78,12 +88,20 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
               <h1 className="font-bold text-sm md:text-base tracking-tight text-white">
                 LaTeX Thesis to PDF Studio
               </h1>
-              <span className="text-[10px] uppercase font-bold tracking-wider bg-blue-500/20 text-blue-300 border border-blue-400/30 px-2 py-0.5 rounded-full">
-                Autumn 2026
-              </span>
+              {hasFiles ? (
+                <span className="text-[10px] uppercase font-bold tracking-wider bg-blue-500/20 text-blue-300 border border-blue-400/30 px-2 py-0.5 rounded-full">
+                  Autumn 2026
+                </span>
+              ) : (
+                <span className="text-[10px] uppercase font-bold tracking-wider bg-slate-800 text-slate-300 border border-slate-700 px-2 py-0.5 rounded-full">
+                  Blank Document
+                </span>
+              )}
             </div>
             <p className="text-[11px] text-slate-400 hidden sm:block">
-              Sister Nivedita University • scrbook Academic Dissertation
+              {hasFiles
+                ? 'Sister Nivedita University • scrbook Academic Dissertation'
+                : 'Clean Workspace • Upload a project or start with a blank LaTeX file'}
             </p>
           </div>
         </div>
@@ -171,13 +189,37 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
             </div>
           )}
 
+          {/* New Blank Document */}
+          {onNewBlankDoc && (
+            <button
+              onClick={onNewBlankDoc}
+              className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition-colors border border-slate-700/60 cursor-pointer"
+              title="Create a new blank document (main.tex)"
+            >
+              <FilePlus className="w-3.5 h-3.5 text-slate-300" />
+              <span className="hidden sm:inline">New Blank</span>
+            </button>
+          )}
+
+          {/* Load Sample Template */}
+          {onLoadTemplate && (
+            <button
+              onClick={onLoadTemplate}
+              className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition-colors border border-slate-700/60 cursor-pointer"
+              title="Load the Sister Nivedita University Thesis Template"
+            >
+              <GraduationCap className="w-3.5 h-3.5 text-amber-400" />
+              <span className="hidden md:inline">Load Template</span>
+            </button>
+          )}
+
           {/* Upload LaTeX ZIP or Code */}
           <button
             onClick={onOpenUploadModal}
-            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-blue-600/30 hover:bg-blue-600/50 text-blue-200 transition-colors border border-blue-500/40 cursor-pointer"
+            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-blue-600/40 hover:bg-blue-600/60 text-blue-100 transition-colors border border-blue-500/40 cursor-pointer"
             title="Upload LaTeX .zip archive or paste raw TeX code"
           >
-            <UploadCloud className="w-3.5 h-3.5 text-blue-400" />
+            <UploadCloud className="w-3.5 h-3.5 text-blue-300" />
             <span className="font-semibold">Upload ZIP / Code</span>
           </button>
 
@@ -225,6 +267,18 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
             <FileDown className="w-3.5 h-3.5 text-slate-400" />
             <span className="hidden xl:inline">Source (.tex)</span>
           </button>
+
+          {/* Quick Copy All LaTeX Code Button */}
+          {onCopyAllCode && (
+            <button
+              onClick={onCopyAllCode}
+              className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-indigo-900/50 text-slate-200 hover:text-indigo-200 transition-colors border border-slate-700/60 cursor-pointer"
+              title="Copy the complete combined LaTeX code of all files to clipboard"
+            >
+              <Copy className="w-3.5 h-3.5 text-indigo-400" />
+              <span className="hidden xl:inline">Copy All LaTeX</span>
+            </button>
+          )}
 
           {/* Browser Print Dialog Button */}
           <button

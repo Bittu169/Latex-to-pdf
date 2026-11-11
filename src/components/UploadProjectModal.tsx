@@ -329,7 +329,7 @@ export const UploadProjectModal: React.FC<UploadProjectModalProps> = ({
                   value={pastedCode}
                   onChange={(e) => setPastedCode(e.target.value)}
                   placeholder="Paste complete LaTeX code here (\documentclass, \begin{document}, equations, etc.)..."
-                  className="w-full h-56 font-mono text-xs bg-slate-900 text-amber-100 p-3 rounded-lg border border-slate-700 focus:outline-hidden focus:ring-2 focus:ring-blue-500 resize-none selection:bg-blue-600/50"
+                  className="w-full h-56 font-mono text-xs bg-slate-900 text-amber-100 p-3 rounded-lg border border-slate-700 focus:outline-hidden focus:ring-2 focus:ring-blue-500 resize-none selection:bg-blue-600/50 code-editor-scroll overflow-x-auto whitespace-pre"
                   required
                 />
 

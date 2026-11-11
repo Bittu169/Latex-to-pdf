@@ -108,3 +108,28 @@
   font-size: 1.05em !important;
   text-rendering: auto;
 }
+
+/* Custom scrollbars for code editor - ensures horizontal and vertical scrollbars are clearly visible and draggable */
+.code-editor-scroll::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.code-editor-scroll::-webkit-scrollbar-track {
+  background: #090d16;
+}
+
+.code-editor-scroll::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 5px;
+  border: 2px solid #090d16;
+}
+
+.code-editor-scroll::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+.code-editor-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #334155 #090d16;
+}

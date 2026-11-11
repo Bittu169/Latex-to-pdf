@@ -1,19 +1,261 @@
 import React from 'react';
-import { ProjectMetadata, BibItem } from '../types/latex';
+import { ProjectMetadata, BibItem, ProjectFile } from '../types/latex';
 import { MathRenderer } from './MathRenderer';
 import { renderLatexText } from '../utils/latexParser';
+import { FileText, UploadCloud, FilePlus, GraduationCap } from 'lucide-react';
+
+interface ParsedSection {
+  title: string;
+  level: 'section' | 'subsection';
+  content: string[];
+}
+
+function parseCustomTexDocument(content: string) {
+  const titleMatch = /\\title\{([^}]+)\}/.exec(content);
+  const title = titleMatch ? titleMatch[1].replace(/\\\\/g, ' ') : '';
+
+  const authorMatch = /\\author\{([^}]+)\}/.exec(content);
+  const author = authorMatch ? authorMatch[1].replace(/\\\\/g, ', ') : '';
+
+  const dateMatch = /\\date\{([^}]+)\}/.exec(content);
+  const date = dateMatch ? (dateMatch[1] === '\\today' ? new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : dateMatch[1]) : '';
+
+  const abstractMatch = /\\begin\{abstract\}([\s\S]*?)\\end\{abstract\}/.exec(content);
+  const abstractText = abstractMatch ? abstractMatch[1].trim() : '';
+
+  const sections: ParsedSection[] = [];
+  const sectionRegex = /\\(section|subsection)\*?\{([^}]+)\}/g;
+
+  const docBeginIdx = content.indexOf('\\begin{document}');
+  const bodyText = docBeginIdx !== -1 ? content.slice(docBeginIdx + 16) : content;
+
+  const sectionMatches = [...bodyText.matchAll(sectionRegex)];
+  
+  if (sectionMatches.length === 0) {
+    const paragraphs = bodyText
+      .replace(/\\maketitle/g, '')
+      .replace(/\\begin\{abstract\}[\s\S]*?\\end\{abstract\}/g, '')
+      .replace(/\\end\{document\}/g, '')
+      .split(/\n\s*\n/)
+      .map(p => p.trim())
+      .filter(p => p.length > 0 && !p.startsWith('%') && !p.startsWith('\\documentclass') && !p.startsWith('\\usepackage'));
+
+    return { title, author, date, abstractText, sections: [{ title: 'Document Content', level: 'section' as const, content: paragraphs }] };
+  }
+
+  for (let i = 0; i < sectionMatches.length; i++) {
+    const sm = sectionMatches[i];
+    const secLevel = sm[1] as 'section' | 'subsection';
+    const secTitle = sm[2].trim();
+    const startIdx = sm.index! + sm[0].length;
+    const endIdx = i + 1 < sectionMatches.length ? sectionMatches[i + 1].index! : bodyText.length;
+    const rawSectionBody = bodyText.slice(startIdx, endIdx).replace(/\\end\{document\}/g, '');
+
+    const paragraphs = rawSectionBody
+      .split(/\n\s*\n/)
+      .map(p => p.trim())
+      .filter(p => p.length > 0 && !p.startsWith('%'));
+
+    sections.push({
+      title: secTitle,
+      level: secLevel,
+      content: paragraphs
+    });
+  }
+
+  return { title, author, date, abstractText, sections };
+}
 
 interface PdfDocumentViewerProps {
+  files?: ProjectFile[];
   metadata: ProjectMetadata;
   bibliography: BibItem[];
   zoom: number;
+  onUploadClick?: () => void;
+  onCreateBlank?: () => void;
+  onLoadTemplate?: () => void;
 }
 
 export const PdfDocumentViewer = React.forwardRef<HTMLDivElement, PdfDocumentViewerProps>(({
+  files,
   metadata,
   bibliography,
-  zoom
+  zoom,
+  onUploadClick,
+  onCreateBlank,
+  onLoadTemplate
 }, ref) => {
+  // Case 1: When no file has been provided (Clean Blank A4 Page)
+  if (!files || files.length === 0) {
+    return (
+      <div
+        ref={ref}
+        id="pdf-document-container"
+        className="flex flex-col items-center gap-12 py-8 print:p-0 print:gap-0 transition-transform origin-top"
+        style={{ transform: `scale(${zoom})`, transformOrigin: 'top center' }}
+      >
+        <div className="latex-page shadow-2xl print:shadow-none border border-slate-300 print:border-none font-academic text-slate-900 flex flex-col justify-between latex-page-content relative bg-white">
+          {/* Header */}
+          <div className="flex justify-between items-end border-b border-slate-300 pb-1 text-xs text-slate-400 uppercase tracking-wider">
+            <span>LaTeX PDF Studio</span>
+            <span>Blank Document</span>
+          </div>
+
+          {/* Center: Blank Page Interactive Guidance */}
+          <div className="flex-1 flex flex-col items-center justify-center text-center p-8 space-y-6">
+            <div className="w-16 h-16 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-400 shadow-xs">
+              <FileText className="w-8 h-8 text-slate-400 stroke-[1.5]" />
+            </div>
+
+            <div className="max-w-md space-y-2">
+              <h2 className="text-2xl font-bold font-serif text-slate-800 tracking-tight">
+                Blank LaTeX Page
+              </h2>
+              <p className="text-sm text-slate-500 leading-relaxed font-sans">
+                No LaTeX files or archives have been provided yet. You can upload an existing project archive (.zip), paste custom LaTeX code, create a blank file, or load the university sample template.
+              </p>
+            </div>
+
+            {/* Non-print action buttons */}
+            <div className="no-print flex flex-col sm:flex-row items-center gap-3 pt-2 font-sans">
+              {onUploadClick && (
+                <button
+                  onClick={onUploadClick}
+                  className="px-4 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-md shadow-blue-500/20 flex items-center gap-2 cursor-pointer transition-all"
+                  title="Upload LaTeX .zip archive or paste TeX code"
+                >
+                  <UploadCloud className="w-4 h-4" />
+                  <span>Upload ZIP / Code</span>
+                </button>
+              )}
+
+              {onCreateBlank && (
+                <button
+                  onClick={onCreateBlank}
+                  className="px-4 py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold shadow-xs flex items-center gap-2 cursor-pointer transition-all"
+                  title="Create a new blank main.tex document"
+                >
+                  <FilePlus className="w-4 h-4" />
+                  <span>Create Blank main.tex</span>
+                </button>
+              )}
+
+              {onLoadTemplate && (
+                <button
+                  onClick={onLoadTemplate}
+                  className="px-4 py-2.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold border border-slate-300 flex items-center gap-2 cursor-pointer transition-all"
+                  title="Load the Sister Nivedita University Thesis Template"
+                >
+                  <GraduationCap className="w-4 h-4 text-slate-600" />
+                  <span>Load Sample Template</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Running Footer */}
+          <div className="flex justify-between items-center text-xs text-slate-400 border-t border-slate-200 pt-2 font-mono">
+            <span>A4 Portrait • 210mm × 297mm</span>
+            <span>Page 1 of 1</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Case 2: Custom uploaded document (not the multi-chapter university template)
+  const isTemplateProject = files.some(f => 
+    f.path.includes('bibtext') || 
+    f.path.includes('chapter') || 
+    f.name === 'Project Main File.tex'
+  );
+
+  if (!isTemplateProject) {
+    const masterFile = files.find(f => f.category === 'main') || files.find(f => f.path.endsWith('.tex')) || files[0];
+    const parsed = parseCustomTexDocument(masterFile.content);
+    const displayTitle = parsed.title || metadata.title || 'Untitled Document';
+    const displayAuthor = parsed.author || metadata.students.map(s => s.name).join(', ') || '';
+
+    return (
+      <div
+        ref={ref}
+        id="pdf-document-container"
+        className="flex flex-col items-center gap-12 py-8 print:p-0 print:gap-0 transition-transform origin-top"
+        style={{ transform: `scale(${zoom})`, transformOrigin: 'top center' }}
+      >
+        <div className="latex-page shadow-2xl print:shadow-none border border-slate-300 print:border-none font-academic text-slate-900 flex flex-col justify-between latex-page-content relative bg-white">
+          <div>
+            {/* Header */}
+            <div className="flex justify-between items-end border-b border-slate-800 pb-1 text-xs text-slate-700 uppercase tracking-wider mb-6">
+              <span>{displayTitle}</span>
+              <span>{parsed.date || 'LaTeX Document'}</span>
+            </div>
+
+            {/* Title & Author */}
+            <div className="text-center mb-8">
+              <h1 className="text-2xl md:text-3xl font-bold text-slate-900 mb-3 tracking-tight">
+                {displayTitle}
+              </h1>
+              {displayAuthor && (
+                <p className="text-base font-medium text-slate-700 mb-1">{displayAuthor}</p>
+              )}
+              {parsed.date && (
+                <p className="text-xs text-slate-500">{parsed.date}</p>
+              )}
+            </div>
+
+            {/* Abstract */}
+            {parsed.abstractText && (
+              <div className="mb-6 px-4 py-3 bg-slate-50 border-l-2 border-slate-700 text-justify text-xs md:text-sm text-slate-800 leading-relaxed italic">
+                <strong className="not-italic font-bold block mb-1">Abstract:</strong>
+                {renderLatexText(parsed.abstractText, bibliography)}
+              </div>
+            )}
+
+            {/* Sections */}
+            <div className="space-y-6 text-sm text-slate-800 leading-relaxed text-justify">
+              {parsed.sections.map((sec, sIdx) => (
+                <div key={sIdx} className="space-y-3">
+                  <h2 className={`font-bold text-slate-900 border-b pb-1 ${sec.level === 'section' ? 'text-lg mt-4' : 'text-base mt-2'}`}>
+                    {sec.title}
+                  </h2>
+                  {sec.content.map((p, pIdx) => {
+                    if (p.includes('\\begin{equation}') || p.includes('\\[') || p.startsWith('$$')) {
+                      const mathCode = p
+                        .replace(/\\begin\{equation\}/g, '')
+                        .replace(/\\end\{equation\}/g, '')
+                        .replace(/\\\[/g, '')
+                        .replace(/\\\]/g, '')
+                        .replace(/\$\$/g, '')
+                        .trim();
+                      return (
+                        <div key={pIdx} className="my-3 text-center">
+                          <MathRenderer math={mathCode} displayMode={true} />
+                        </div>
+                      );
+                    }
+                    return (
+                      <p key={pIdx} className="leading-relaxed">
+                        {renderLatexText(p, bibliography)}
+                      </p>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="flex justify-between items-center text-xs text-slate-700 border-t border-slate-300 pt-2 font-mono">
+            <span>Compiled with KaTeX LaTeX Engine</span>
+            <span>Page 1</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Case 3: Complete Sister Nivedita University Dissertation Template
   return (
     <div
       ref={ref}

@@ -1,9 +1,15 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { INITIAL_FILES, INITIAL_METADATA, INITIAL_BIBLIOGRAPHY } from './data/initialProject';
+import {
+  INITIAL_FILES,
+  INITIAL_METADATA,
+  INITIAL_BIBLIOGRAPHY,
+  BLANK_METADATA,
+  BLANK_MAIN_TEX
+} from './data/initialProject';
 import { ProjectFile, ProjectMetadata } from './types/latex';
 import { parseBibtex } from './utils/latexParser';
 import { PdfDocumentViewer } from './components/PdfDocumentViewer';
-import { CodeEditor } from './components/CodeEditor';
+import { CodeEditor, buildCombinedCode } from './components/CodeEditor';
 import { HeaderBar, ViewMode } from './components/HeaderBar';
 import { EquationGalleryModal } from './components/EquationGalleryModal';
 import { QuickSettingsModal } from './components/QuickSettingsModal';
@@ -30,13 +36,16 @@ import {
   History,
   Check,
   UploadCloud,
-  AlignLeft
+  AlignLeft,
+  GraduationCap,
+  FilePlus
 } from 'lucide-react';
 
 export const App: React.FC = () => {
-  const [files, setFiles] = useState<ProjectFile[]>(INITIAL_FILES);
-  const [activeFilePath, setActiveFilePath] = useState<string>("Project Main File.tex");
-  const [metadata, setMetadata] = useState<ProjectMetadata>(INITIAL_METADATA);
+  // Start with clean blank workspace when opening for the first time
+  const [files, setFiles] = useState<ProjectFile[]>([]);
+  const [activeFilePath, setActiveFilePath] = useState<string>('');
+  const [metadata, setMetadata] = useState<ProjectMetadata>(BLANK_METADATA);
   const [viewMode, setViewMode] = useState<ViewMode>('pdf');
   const [zoom, setZoom] = useState<number>(1.0);
   const [isEquationModalOpen, setIsEquationModalOpen] = useState<boolean>(false);
@@ -200,7 +209,7 @@ export const App: React.FC = () => {
       const parsed = parseBibtex(bibFile.content);
       if (parsed.length > 0) return parsed;
     }
-    return INITIAL_BIBLIOGRAPHY;
+    return files.length === 0 ? [] : INITIAL_BIBLIOGRAPHY;
   }, [files]);
 
   // Calculate total word count summary across all .tex files
@@ -226,6 +235,40 @@ export const App: React.FC = () => {
     if (original) {
       handleUpdateFileContent(path, original.content);
     }
+  };
+
+  // Create a new blank LaTeX file (main.tex)
+  const handleCreateBlankFile = () => {
+    const newFile: ProjectFile = {
+      path: 'main.tex',
+      name: 'main.tex',
+      content: BLANK_MAIN_TEX,
+      category: 'main',
+      description: 'Blank LaTeX Document'
+    };
+    setFiles([newFile]);
+    setActiveFilePath('main.tex');
+    setMetadata({
+      ...BLANK_METADATA,
+      title: 'Untitled Document'
+    });
+    showToast('Created blank main.tex document');
+  };
+
+  // Load the full Sister Nivedita University thesis template
+  const handleLoadTemplate = () => {
+    setFiles(INITIAL_FILES);
+    setActiveFilePath('Project Main File.tex');
+    setMetadata(INITIAL_METADATA);
+    showToast('Loaded Sister Nivedita University Thesis Template');
+  };
+
+  // Reset workspace to clean blank page
+  const handleResetToBlank = () => {
+    setFiles([]);
+    setActiveFilePath('');
+    setMetadata(BLANK_METADATA);
+    showToast('Switched to clean blank page');
   };
 
   // Update metadata and synchronize with relevant TeX files
@@ -331,6 +374,10 @@ ${newMetadata.students.map(s => `    \\studentName{${s.name}}`).join('\n')}
   // DIRECT WORD (.DOCX) FILE DOWNLOAD
   const handleDownloadWord = async () => {
     if (isGeneratingWord) return;
+    if (files.length === 0) {
+      showToast('Document is blank. Please create or upload a LaTeX file first.');
+      return;
+    }
     try {
       setIsGeneratingWord(true);
       const sanitizedTitle = (metadata.title || 'Student_Project_Report')
@@ -349,6 +396,10 @@ ${newMetadata.students.map(s => `    \\studentName{${s.name}}`).join('\n')}
 
   // Download active file
   const handleExportCode = () => {
+    if (files.length === 0) {
+      showToast('No files to export. Create or upload a file first.');
+      return;
+    }
     const activeFile = files.find(f => f.path === activeFilePath) || files[0];
     const blob = new Blob([activeFile.content], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
@@ -359,6 +410,17 @@ ${newMetadata.students.map(s => `    \\studentName{${s.name}}`).join('\n')}
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+  };
+
+  // Copy all project LaTeX code directly to clipboard
+  const handleCopyAllCode = () => {
+    if (files.length === 0) {
+      showToast('No code to copy. Project is blank.');
+      return;
+    }
+    const combined = buildCombinedCode(files);
+    navigator.clipboard.writeText(combined);
+    showToast(`Copied entire LaTeX project code (${files.length} files) to clipboard!`);
   };
 
   // Keyboard shortcuts
@@ -407,6 +469,10 @@ ${newMetadata.students.map(s => `    \\studentName{${s.name}}`).join('\n')}
         onDownloadWord={handleDownloadWord}
         onPrintPdf={handlePrintPdf}
         onExportCode={handleExportCode}
+        onCopyAllCode={handleCopyAllCode}
+        onLoadTemplate={handleLoadTemplate}
+        onNewBlankDoc={files.length > 0 ? handleResetToBlank : handleCreateBlankFile}
+        hasFiles={files.length > 0}
         isGeneratingPdf={isGeneratingPdf}
         isGeneratingWord={isGeneratingWord}
         pdfProgressText={pdfProgress ? `Page ${pdfProgress.currentPage}/${pdfProgress.totalPages}` : undefined}
@@ -416,12 +482,28 @@ ${newMetadata.students.map(s => `    \\studentName{${s.name}}`).join('\n')}
       <div className="no-print bg-gradient-to-r from-blue-900 via-slate-900 to-indigo-950 text-white px-4 py-2 text-xs border-b border-blue-950 flex flex-wrap items-center justify-between gap-2 shadow-xs">
         <div className="flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-          <span>
-            <strong>Sister Nivedita University Thesis Template (Autumn 2026):</strong> Formatted with KaTeX mathematics, local IndexedDB revision history, and ZIP/TeX upload.
-          </span>
+          {files.length > 0 ? (
+            <span>
+              <strong>{metadata.title || 'Active LaTeX Document'}:</strong> Live KaTeX math preview, word count scanner, and PDF / Word export.
+            </span>
+          ) : (
+            <span>
+              <strong>Blank LaTeX Page:</strong> No file provided yet. Upload your LaTeX .zip archive, paste code, or start typing.
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-3 text-slate-300">
+          {files.length === 0 && (
+            <button
+              onClick={handleLoadTemplate}
+              className="text-amber-300 hover:text-amber-200 flex items-center gap-1 cursor-pointer font-semibold underline underline-offset-2"
+              title="Load the Sister Nivedita University Thesis Template"
+            >
+              <GraduationCap className="w-3.5 h-3.5 text-amber-400" />
+              <span>Load Sample Template</span>
+            </button>
+          )}
           <button
             onClick={() => setIsUploadModalOpen(true)}
             className="text-amber-300 hover:text-amber-200 flex items-center gap-1 cursor-pointer font-semibold underline underline-offset-2"
@@ -508,9 +590,13 @@ ${newMetadata.students.map(s => `    \\studentName{${s.name}}`).join('\n')}
           <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-8 flex justify-center">
             <PdfDocumentViewer
               ref={pdfContainerRef}
+              files={files}
               metadata={metadata}
               bibliography={bibliography}
               zoom={zoom}
+              onUploadClick={() => setIsUploadModalOpen(true)}
+              onCreateBlank={handleCreateBlankFile}
+              onLoadTemplate={handleLoadTemplate}
             />
           </div>
         )}
@@ -526,6 +612,10 @@ ${newMetadata.students.map(s => `    \\studentName{${s.name}}`).join('\n')}
                 onSelectFile={setActiveFilePath}
                 onUpdateFileContent={handleUpdateFileContent}
                 onResetToDefault={handleResetToDefault}
+                onUpdateAllFiles={setFiles}
+                onCreateBlankFile={handleCreateBlankFile}
+                onUploadClick={() => setIsUploadModalOpen(true)}
+                onLoadTemplate={handleLoadTemplate}
               />
             </div>
 
@@ -533,9 +623,13 @@ ${newMetadata.students.map(s => `    \\studentName{${s.name}}`).join('\n')}
             <div className="lg:w-1/2 h-[55vh] lg:h-auto overflow-y-auto bg-slate-200/80 rounded-lg p-4 border border-slate-300 shadow-inner flex justify-center">
               <PdfDocumentViewer
                 ref={pdfContainerRef}
+                files={files}
                 metadata={metadata}
                 bibliography={bibliography}
                 zoom={Math.min(zoom, 0.85)}
+                onUploadClick={() => setIsUploadModalOpen(true)}
+                onCreateBlank={handleCreateBlankFile}
+                onLoadTemplate={handleLoadTemplate}
               />
             </div>
           </div>
@@ -550,6 +644,10 @@ ${newMetadata.students.map(s => `    \\studentName{${s.name}}`).join('\n')}
               onSelectFile={setActiveFilePath}
               onUpdateFileContent={handleUpdateFileContent}
               onResetToDefault={handleResetToDefault}
+              onUpdateAllFiles={setFiles}
+              onCreateBlankFile={handleCreateBlankFile}
+              onUploadClick={() => setIsUploadModalOpen(true)}
+              onLoadTemplate={handleLoadTemplate}
             />
           </div>
         )}

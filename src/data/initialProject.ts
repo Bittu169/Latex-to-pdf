@@ -1,5 +1,33 @@
 import { ProjectFile, ProjectMetadata, BibItem } from '../types/latex';
 
+export const BLANK_METADATA: ProjectMetadata = {
+  title: "Untitled Document",
+  degree: "",
+  department: "",
+  university: "",
+  place: "",
+  year: new Date().getFullYear().toString(),
+  submissionDate: "",
+  supervisorName: "",
+  supervisorDesignation: "",
+  students: []
+};
+
+export const BLANK_MAIN_TEX = `\\documentclass[a4paper,12pt]{article}
+\\usepackage{amsmath,amssymb,graphicx}
+
+\\title{Untitled Document}
+\\author{Author Name}
+\\date{\\today}
+
+\\begin{document}
+\\maketitle
+
+\\section{Introduction}
+Start writing your LaTeX document content here...
+
+\\end{document}`;
+
 export const INITIAL_METADATA: ProjectMetadata = {
   title: "Air-Writing Recognition & Gesture Classification Using Deep Neural Networks",
   degree: "BACHELOR OF TECHNOLOGY (CSE)",
